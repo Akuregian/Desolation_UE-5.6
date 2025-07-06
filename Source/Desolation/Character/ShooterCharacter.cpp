@@ -70,6 +70,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 void AShooterCharacter::OnAbilityActivated(FGameplayTag InputTag)
 {
+	
+	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,FString::Printf(TEXT("ShooterCharacter Ability Activated")));
 	// Activate the WeaponFire Gameplay Ability
 	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
 }
@@ -103,7 +105,6 @@ float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dam
 		{
 			CurrentWeapon->DeactivateWeapon();
 		}
-		
 
 		// reset the bullet counter UI
 		OnBulletCountUpdated.Broadcast(0, 0);
@@ -117,6 +118,7 @@ float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dam
 
 void AShooterCharacter::DoStartFiring()
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,FString::Printf(TEXT("Firing")));
 	// fire the current weapon
 	if (CurrentWeapon)
 	{
@@ -295,4 +297,36 @@ AShooterWeapon* AShooterCharacter::FindWeaponOfType(TSubclassOf<AShooterWeapon> 
 	// weapon not found
 	return nullptr;
 
+}
+
+void AShooterCharacter::DebugPrintTags()
+{
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DebugPrintTags] No ASC found."));
+		return;
+	}
+
+	// 1. Gather owned tags
+	FGameplayTagContainer OwnedTags;
+	AbilitySystemComponent->GetOwnedGameplayTags(OwnedTags);
+
+	// 2. Convert to a single-line string
+	//    e.g. "Survival.Ability.Weapon.StartFiring,Status.Poisoned"
+	FString TagsString = OwnedTags.ToStringSimple();
+
+	// 3. On-screen debug: use a constant message key so we don't spam multiple lines
+	static const int32 DebugMsgKey = 1337;
+	const float DisplayTime = 1.5f;              // seconds
+	const FColor DisplayColor = FColor::Green;   // whatever you like
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			DebugMsgKey,
+			DisplayTime,
+			DisplayColor,
+			FString::Printf(TEXT("ActiveTags: %s"), *TagsString)
+		);
+	}
 }

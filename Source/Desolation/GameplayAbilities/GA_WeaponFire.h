@@ -39,5 +39,7 @@ public:
 	/** Called when we receive the StopFiring gameplay event */
 	UFUNCTION()
 	void StopFiringEventReceived(FGameplayEventData Payload);
+
+	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
 	
 };

@@ -13,8 +13,9 @@ UGA_WeaponFire::UGA_WeaponFire()
 	StartFiringTag = FGameplayTag::RequestGameplayTag(FName("Survival.Ability.Weapon.StartFiring"));
 	EndFiringTag = FGameplayTag::RequestGameplayTag(FName("Survival.Ability.Weapon.StopFiring"));
 
-	// Fire tag
-	AbilityTags.AddTag(StartFiringTag);
+	// FireWeapon tag
+	SetAssetTags(FGameplayTagContainer(StartFiringTag));
+	ActivationOwnedTags.AddTag(StartFiringTag); // Test to see if this works better
 }
 
 void UGA_WeaponFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -23,6 +24,7 @@ void UGA_WeaponFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,FString::Printf(TEXT("Activating Ability")));
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -30,10 +32,7 @@ void UGA_WeaponFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	}
 
 	// Start Firing if Shooter is valid
-	if (AShooterCharacter* Shooter = Cast<AShooterCharacter>(GetActorInfo().AvatarActor))
-	{
-		Shooter->DoStartFiring();
-	}
+	FireWeapon();
 
 	// Wait for the StopFiring gameplay event to end the ability
 	UAbilityTask_WaitGameplayEvent* WaitStop =
@@ -67,4 +66,16 @@ void UGA_WeaponFire::StopFiringEventReceived(FGameplayEventData Payload)
 		/*bReplicateEndAbility=*/true,
 		/*bWasCancelled=*/false
 	);
+}
+
+void UGA_WeaponFire::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+{
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+	
+	// Stop firing if canceled
+	if (AShooterCharacter* Shooter = Cast<AShooterCharacter>(GetActorInfo().AvatarActor))
+	{
+		Shooter->DoStopFiring();
+	}
 }

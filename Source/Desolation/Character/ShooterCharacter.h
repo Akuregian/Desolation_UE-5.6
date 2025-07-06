@@ -158,4 +158,8 @@ protected:
 
 	/** Returns true if the character already owns a weapon of the given class */
 	AShooterWeapon* FindWeaponOfType(TSubclassOf<AShooterWeapon> WeaponClass) const;
+
+	// TEST FOR DEBUGGING
+	UFUNCTION(Exec, BlueprintCallable, Category = "Debug")
+	void DebugPrintTags();
 };
