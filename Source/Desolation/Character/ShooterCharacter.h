@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "DesolationCharacter.h"
 #include "ShooterWeapon/ShooterWeaponHolder.h"
+#include "AbilitySystemInterface.h"
+#include "DataAssets/AbilityInputActionBinding.h"
 #include "ShooterCharacter.generated.h"
 
 class AShooterWeapon;
@@ -20,7 +22,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBulletCountUpdatedDelegate, int32,
  *  Manages health and death
  */
 UCLASS(abstract)
-class DESOLATION_API AShooterCharacter : public ADesolationCharacter, public IShooterWeaponHolder
+class DESOLATION_API AShooterCharacter : public ADesolationCharacter, public IShooterWeaponHolder, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 	
@@ -29,6 +31,8 @@ class DESOLATION_API AShooterCharacter : public ADesolationCharacter, public ISh
 	UPawnNoiseEmitterComponent* PawnNoiseEmitter;
 
 protected:
+
+	virtual void BeginPlay() override;
 
 	/** Fire weapon input action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input")
@@ -66,18 +70,37 @@ protected:
 
 public:
 
+	// -------- IAbilitySystemInterface --------
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
+	// -----------------------------------------
+
 	/** Bullet count updated delegate */
 	FBulletCountUpdatedDelegate OnBulletCountUpdated;
 
 public:
 
 	/** Constructor */
-	AShooterCharacter();
+	AShooterCharacter(const FObjectInitializer& FObjectInitializer);
+
+	UPROPERTY(EditAnywhere, Category="InputConfig")
+	UAbilityInputActionBinding* InputBindings;
 
 protected:
 
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+
+	UFUNCTION()
+	void OnAbilityActivated(FGameplayTag InputTag);
+	
+	UFUNCTION()
+	void OnAbilityEnded(FGameplayTag InputTag);
+
+	// the core GAS object
+	UPROPERTY(BlueprintReadWrite, Category="Ability System Component")
+	UAbilitySystemComponent* AbilitySystemComponent;
+
+	// Add Attribute Set (ie. Health, Armor, Mana, etc.)
 
 public:
 

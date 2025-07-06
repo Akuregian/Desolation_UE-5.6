@@ -8,6 +8,8 @@
 #include "Animation/AnimInstance.h"
 #include "ShooterWeapon.generated.h"
 
+class UGameplayAbility;
+class UGA_WeaponFire;
 class IShooterWeaponHolder;
 class AShooterProjectile;
 class USkeletalMeshComponent;
@@ -32,6 +34,9 @@ class DESOLATION_API AShooterWeapon : public AActor
 	/** Third person perspective mesh */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* ThirdPersonMesh;
+
+	UPROPERTY(EditAnywhere, Category="Components")
+	TSubclassOf<UGameplayAbility> WeaponFireAbility;
 
 protected:
 
@@ -113,6 +118,9 @@ public:
 
 	/** Constructor */
 	AShooterWeapon();
+
+	// Getter for the WeaponFire Ability
+	FORCEINLINE TSubclassOf<UGameplayAbility> GetWeaponFireAbility() const { return WeaponFireAbility; }
 
 protected:
 	

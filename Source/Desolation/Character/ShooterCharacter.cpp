@@ -10,14 +10,30 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "Camera/CameraComponent.h"
+#include "AbilitySystemComponent.h"
 
-AShooterCharacter::AShooterCharacter()
+void AShooterCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+}
+
+AShooterCharacter::AShooterCharacter(const FObjectInitializer& FObjectInitializer)
+	: Super(FObjectInitializer)
 {
 	// create the noise emitter component
 	PawnNoiseEmitter = CreateDefaultSubobject<UPawnNoiseEmitterComponent>(TEXT("Pawn Noise Emitter"));
 
 	// configure movement
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 600.0f, 0.0f);
+
+	// Create and Replicate ASC
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+
+	// TODO: Create (only) and add Attributes to protected variable in header..
+	
 }
 
 void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -28,14 +44,44 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		// Firing
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AShooterCharacter::DoStartFiring);
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AShooterCharacter::DoStopFiring);
+		if (InputBindings)
+		{
+			for (const auto& Binding : InputBindings->AbilityInputActions)
+			{
+				EnhancedInputComponent->BindAction(
+					Binding.InputAction,
+					ETriggerEvent::Started,
+					this,
+					&AShooterCharacter::OnAbilityActivated,
+					Binding.InputTag
+				);
 
-		// Switch weapon
-		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Triggered, this, &AShooterCharacter::DoSwitchWeapon);
+				EnhancedInputComponent->BindAction(
+					Binding.InputAction,
+					ETriggerEvent::Completed,
+					this,
+					&AShooterCharacter::OnAbilityEnded,
+					Binding.InputTag
+				);
+			}
+		}
 	}
+}
 
+void AShooterCharacter::OnAbilityActivated(FGameplayTag InputTag)
+{
+	// Activate the WeaponFire Gameplay Ability
+	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
+}
+
+void AShooterCharacter::OnAbilityEnded(FGameplayTag InputTag)
+{
+	// Broadcast explicit "StopFire" tag 
+	const FGameplayTag StopFireTag =
+		FGameplayTag::RequestGameplayTag(TEXT("Survival.Ability.Weapon.StopFiring"));
+	FGameplayEventData EventData;
+	EventData.EventTag = StopFireTag;
+	AbilitySystemComponent->HandleGameplayEvent(StopFireTag, &EventData);
 }
 
 float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -205,11 +251,29 @@ void AShooterCharacter::OnWeaponActivated(AShooterWeapon* Weapon)
 	// set the character mesh AnimInstances
 	GetFirstPersonMesh()->SetAnimInstanceClass(Weapon->GetFirstPersonAnimInstanceClass());
 	GetMesh()->SetAnimInstanceClass(Weapon->GetThirdPersonAnimInstanceClass());
+
+	// Grant the Fire Weapon Ability for this weapon
+	if (AbilitySystemComponent && Weapon->GetWeaponFireAbility())
+	{
+		// 1. Create a spec with INDEX_NONE for InputID
+		FGameplayAbilitySpec Spec(
+			Weapon->GetWeaponFireAbility(),  // TSubclassOf<UGameplayAbility>
+			/*Level=*/ 1,
+			/*InputID=*/ 1,
+			/*SourceObject=*/ Weapon
+		);
+		
+		// 3. Give it to the ASC
+		AbilitySystemComponent->GiveAbility(Spec);
+	}
 }
 
 void AShooterCharacter::OnWeaponDeactivated(AShooterWeapon* Weapon)
 {
-	// unused
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->ClearAllAbilities();
+	}
 }
 
 void AShooterCharacter::OnSemiWeaponRefire()

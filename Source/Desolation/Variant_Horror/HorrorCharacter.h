@@ -78,7 +78,7 @@ public:
 protected:
 
 	/** Constructor */
-	AHorrorCharacter();
+	AHorrorCharacter(const FObjectInitializer& ObjectInitializer);
 
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;
