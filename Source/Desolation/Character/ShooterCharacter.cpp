@@ -70,8 +70,6 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 void AShooterCharacter::OnAbilityActivated(FGameplayTag InputTag)
 {
-	
-	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red,FString::Printf(TEXT("ShooterCharacter Ability Activated")));
 	// Activate the WeaponFire Gameplay Ability
 	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(InputTag));
 }

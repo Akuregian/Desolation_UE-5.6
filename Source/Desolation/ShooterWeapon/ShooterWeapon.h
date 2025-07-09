@@ -46,6 +46,10 @@ protected:
 	/** Type of projectiles this weapon will shoot */
 	UPROPERTY(EditAnywhere, Category="Ammo")
 	TSubclassOf<AShooterProjectile> ProjectileClass;
+	
+	/** Number of projectiles to fire */
+	UPROPERTY(EditAnywhere, Category="Ammo")
+	int32 NumProjectilesPerShot = 1;
 
 	/** Number of bullets in a magazine */
 	UPROPERTY(EditAnywhere, Category="Ammo")

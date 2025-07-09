@@ -10,6 +10,7 @@
 #include "TimerManager.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/Pawn.h"
 
 AShooterWeapon::AShooterWeapon()
@@ -161,17 +162,32 @@ void AShooterWeapon::FireCooldownExpired()
 
 void AShooterWeapon::FireProjectile(const FVector& TargetLocation)
 {
-	// get the projectile transform
-	FTransform ProjectileTransform = CalculateProjectileSpawnTransform(TargetLocation);
+	TArray<AShooterProjectile*> Projectiles;
 	
-	// spawn the projectile
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::OverrideRootScale;
-	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = PawnOwner;
+	// for shotguns or multi-projectile weapons
+	for (int32 i = 0; i < NumProjectilesPerShot; ++i)
+	{
+		// get a slightly randomized spawn transform for spread
+		FTransform ProjectileTransform = CalculateProjectileSpawnTransform(TargetLocation);
 
-	AShooterProjectile* Projectile = GetWorld()->SpawnActor<AShooterProjectile>(ProjectileClass, ProjectileTransform, SpawnParams);
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::OverrideRootScale;
+		SpawnParams.Owner = GetOwner();
+		SpawnParams.Instigator = PawnOwner;
+
+		AShooterProjectile* Projectile = GetWorld()->SpawnActor<AShooterProjectile>(ProjectileClass, ProjectileTransform, SpawnParams);
+		Projectile->CollisionComponent->IgnoreActorWhenMoving(GetInstigator(), true);
+
+		for (AShooterProjectile* Project : Projectiles)
+		{
+			Projectile->CollisionComponent->IgnoreActorWhenMoving(Project, true);
+			Project->CollisionComponent->IgnoreActorWhenMoving(Projectile, true);
+		}
+		
+		Projectiles.Add(Projectile);
+	}
+
 
 	// play the firing montage
 	WeaponOwner->PlayFiringMontage(FiringMontage);

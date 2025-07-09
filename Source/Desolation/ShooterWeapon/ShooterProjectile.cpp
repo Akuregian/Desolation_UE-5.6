@@ -2,6 +2,9 @@
 
 
 #include "ShooterWeapon/ShooterProjectile.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffectTypes.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameFramework/Character.h"
@@ -60,17 +63,51 @@ void AShooterProjectile::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Ot
 		// give some physics impulse to the object
 		OtherComp->AddImpulseAtLocation(GetVelocity() * PhysicsForce, Hit.ImpactPoint);
 	}
-
-	// have we hit a character?
-	if (ACharacter* HitCharacter = Cast<ACharacter>(Other))
+	
+	// If we hit a pawn/character with an ASC, apply our damage GE:
+	if (Other && Other != GetInstigator())
 	{
-		// ignore the owner of this projectile
-		if (HitCharacter != GetOwner())
+		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Other))
 		{
-			// damage the hit character
-			DamageCharacter(HitCharacter, Hit);
+			UAbilitySystemComponent* TargetASC = ASI->GetAbilitySystemComponent();
+			if (TargetASC && *BulletDamageGE)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, "Found TargetASC");
+				// 1) Build the effect context (so cues see the HitResult)
+				FGameplayEffectContextHandle Ctxt = 
+					TargetASC->MakeEffectContext();
+				Ctxt.AddHitResult(Hit);
+
+				// 2) Create the spec (level 1, but magnitude is SetByCaller)
+				FGameplayEffectSpecHandle SpecHandle = 
+					TargetASC->MakeOutgoingSpec(
+						BulletDamageGE, 
+						/*Level=*/1, 
+						Ctxt);
+
+				// 3) Set our actual damage amount
+				SpecHandle.Data->SetSetByCallerMagnitude(
+					DamageTag, 
+					HitDamage);
+
+				// 4) Apply to the target
+				TargetASC->ApplyGameplayEffectSpecToSelf(
+					*SpecHandle.Data.Get());
+			}
 		}
 	}
+
+	// TODO: Change this to implement GameplayTags
+	// have we hit a character?
+//	if (ACharacter* HitCharacter = Cast<ACharacter>(Other))
+//	{
+//		// ignore the owner of this projectile
+//		if (HitCharacter != GetOwner())
+//		{
+//			// damage the hit character
+//			DamageCharacter(HitCharacter, Hit);
+//		}
+//	}
 
 	// disable collision on the projectile
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);

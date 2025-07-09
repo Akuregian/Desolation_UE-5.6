@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/Actor.h"
 #include "ShooterProjectile.generated.h"
 
+class UGameplayEffect;
 class USphereComponent;
 class UProjectileMovementComponent;
 class ACharacter;
@@ -17,10 +19,6 @@ UCLASS(abstract)
 class DESOLATION_API AShooterProjectile : public AActor
 {
 	GENERATED_BODY()
-	
-	/** Provides collision detection for the projectile */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USphereComponent* CollisionComponent;
 
 	/** Handles movement for the projectile */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
@@ -52,6 +50,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Hit")
 	TSubclassOf<UDamageType> HitDamageType;
 
+	UPROPERTY(EditDefaultsOnly, Category="Hit")
+	TSubclassOf<UGameplayEffect> BulletDamageGE;
+
+	UPROPERTY(EditDefaultsOnly, Category="Hit")
+	FGameplayTag DamageTag;
+	
 	/** If true, this projectile has already hit another surface */
 	bool bHit = false;
 
@@ -59,6 +63,10 @@ public:
 
 	/** Constructor */
 	AShooterProjectile();
+	
+	/** Provides collision detection for the projectile */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	USphereComponent* CollisionComponent;
 
 protected:
 	
